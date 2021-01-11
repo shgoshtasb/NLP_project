@@ -1,4 +1,5 @@
 from . import torch_utils
+import torch
 
 class HistogramCalibrator:
     def __init__(self, num_calibration, num_bins):
@@ -147,10 +148,10 @@ class HistogramMarginalCalibrator:
 
     def calibrate(self, probs):
         assert self._k == probs.shape[1]
-        calibrated_probs = torch.zeros_like(probs)
+        calibrated_probs = torch.zeros_like(probs).cuda()
         for c in range(self._k):
             probs_c = probs[:, c]
-            calibrated_probs[:, c] = self._calibrators[c](probs_c)
+            calibrated_probs[:, c] = self._calibrators[c](probs_c).reshape(-1,)
         return calibrated_probs
 
 
@@ -193,9 +194,9 @@ class PlattBinnerMarginalCalibrator:
 
     def calibrate(self, probs):
         assert self._k == probs.shape[1]
-        calibrated_probs = torch.zeros_like(probs)
+        calibrated_probs = torch.zeros_like(probs).cuda()
         for c in range(self._k):
             probs_c = probs[:, c]
             platt_probs_c = self._platts[c](probs_c)
-            calibrated_probs[:, c] = self._calibrators[c](platt_probs_c)
+            calibrated_probs[:, c] = self._calibrators[c](platt_probs_c).reshape(-1,)
         return calibrated_probs
