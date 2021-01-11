@@ -7,6 +7,7 @@ from collections import defaultdict
 import random
 import numpy as np
 import torch
+import pickle
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 from tensorboardX import SummaryWriter
@@ -264,6 +265,8 @@ def get_poscal_p_emps(model, num_epochs, global_step, epoch_iterator, bins, num_
         # task, model, epochs,total_loss,mle_loss,poscal_loss,train_ece
         if args.poscal_train:
             rtypes = "PosCal"
+        elif args.plattbin_train:
+            rtype = "plattbin"
         else:
             rtypes = "MLE"
 
@@ -554,6 +557,8 @@ def train(args, train_dataset, model, tokenizer, num_labels, valid_dataset=None)
                             # task, model, epochs,total_loss,mle_loss,poscal_loss,train_ece
                             if args.poscal_train:
                                 rtypes = "PosCal"
+                            elif args.plattbin_train:
+                                rtypes = "plattbin"
                             else:
                                 rtypes = "MLE"
 
@@ -711,6 +716,8 @@ def evaluate(args, model, tokenizer, num_labels, prefix=""):
         # For Outfiles
         if args.poscal_train:
             rtypes = "PosCal"
+        elif args.plattbin_train:
+            rtypes = "plattbin"
         else:
             rtypes = "MLE"
 
@@ -724,6 +731,9 @@ def evaluate(args, model, tokenizer, num_labels, prefix=""):
             writer.write("eval_ece \t %.6f" % (eval_ece))
             writer.write("\n")
 
+        output_pred_file = os.path.join(args.output_dir, 'preds')
+        with open(output_pred_file, 'wb+') as f:
+            pickle.dump((preds, out_label_ids), f)
     return results
 
 

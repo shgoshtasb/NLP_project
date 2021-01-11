@@ -2,3 +2,15 @@
 __pycache__
 .*.swp
 *.pyc
+crowdflower_*
+dailydialog_*
+hateoffensive_*
+runs
+sarcasmghosh_*
+sentitreebank_*
+shorthumor_*
+shortromance_*
+stanfordpoliteness_*
+trofi_*
+vua_*
+xslue_data*
