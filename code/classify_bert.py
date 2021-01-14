@@ -220,7 +220,12 @@ def get_plattbin_calibrators(model, num_epochs, global_step, entire_train_datase
 
     p_hats = torch.cat(p_hats, dim = 0)
     labels = torch.cat(labels, dim = 0)
-    Calibrator = torch_calibrators.PlattBinnerMarginalCalibrator
+    if args.plattbin_train:
+        Calibrator = torch_calibrators.PlattBinnerMarginalCalibrator
+    elif args.plattbintop_train:
+        Calibrator = torch_calibrators.PlattBinnerTopCalibrator
+    elif args.platt_train:
+        Calibrator = torch_calibrators.PlattCalibrator
     calibrator = Calibrator(1, args.bin_size)
     calibrator.train_calibration(p_hats, labels)
     return calibrator
@@ -266,7 +271,11 @@ def get_poscal_p_emps(model, num_epochs, global_step, epoch_iterator, bins, num_
         if args.poscal_train:
             rtypes = "PosCal"
         elif args.plattbin_train:
-            rtype = "plattbin"
+            rtypes = "plattbin"
+        elif args.plattbintop_train:
+            rtypes = "plattbintop"
+        elif args.platt_train:
+            rtypes = "platt"
         else:
             rtypes = "MLE"
 
@@ -409,7 +418,7 @@ def train(args, train_dataset, model, tokenizer, num_labels, valid_dataset=None)
         output_train_file = os.path.join(args.output_dir, "train.txt")
         if args.poscal_train:
             p_emps = get_poscal_p_emps(model, num_epochs, global_step, epoch_iterator, bins, num_labels, args, output_train_file)
-        elif args.plattbin_train:
+        elif args.plattbin_train or args.plattbintop_train or args.platt_train:
             calibrators = get_plattbin_calibrators(model, num_epochs, global_step, entire_train_datasetloader, epoch_iterator, num_labels, args, output_train_file)
         epoch_loss, epoch_loss_mle, epoch_loss_cal = 0.0, 0.0, 0.0
         update_freq = len(epoch_iterator) // args.num_updates
@@ -510,7 +519,7 @@ def train(args, train_dataset, model, tokenizer, num_labels, valid_dataset=None)
 
                 ##Update p_emps
                 if (num_epochs > args.calloss_start_epochs
-                    and (args.poscal_train or args.plattbin_train)
+                    and (args.poscal_train or args.plattbin_train or args.plattbintop_train or args.platt_train)
                     and ((step + 1) % update_freq == 0
                  or (step + 1) == len(epoch_iterator) or step == 0)):
 
@@ -521,7 +530,7 @@ def train(args, train_dataset, model, tokenizer, num_labels, valid_dataset=None)
                     output_train_file = os.path.join(args.output_dir, "train.txt")
                     if args.poscal_train:
                         p_emps = get_poscal_p_emps(model, num_epochs, global_step, epoch_iterator, bins, num_labels, args, output_train_file)
-                    elif args.plattbin_train:
+                    elif args.plattbin_train or args.plattbintop_train or args.platt_train:
                         calibrators = get_plattbin_calibrators(model, num_epochs, global_step, entire_train_datasetloader, epoch_iterator, num_labels, args, output_train_file)
 
                 if valid_dataset is not None:
@@ -559,6 +568,10 @@ def train(args, train_dataset, model, tokenizer, num_labels, valid_dataset=None)
                                 rtypes = "PosCal"
                             elif args.plattbin_train:
                                 rtypes = "plattbin"
+                            elif args.plattbintop_train:
+                                rtypes = "plattbintop"
+                            elif args.platt_train:
+                                rtypes = "platt"
                             else:
                                 rtypes = "MLE"
 
@@ -581,6 +594,16 @@ def train(args, train_dataset, model, tokenizer, num_labels, valid_dataset=None)
                             )
                             train_iterator.close()
                             train_ = False
+                            # Save model checkpoint
+                            output_dir = os.path.join(args.output_dir, "checkpoint")
+                            if not os.path.exists(output_dir):
+                                os.makedirs(output_dir)
+                            model_to_save = (
+                                model.module if hasattr(model, "module") else model
+                            )  # Take care of distributed/parallel training
+                            model_to_save.save_pretrained(output_dir)
+                            torch.save(args, os.path.join(output_dir, "training_args.bin"))
+                            # logger.info("Saving model checkpoint to %s", output_dir)
                             break
                         val_loss_per_steps.append(val_loss)
 
@@ -718,6 +741,10 @@ def evaluate(args, model, tokenizer, num_labels, prefix=""):
             rtypes = "PosCal"
         elif args.plattbin_train:
             rtypes = "plattbin"
+        elif args.plattbintop_train:
+            rtypes = "plattbintop"
+        elif args.platt_train:
+            rtypes = "platt"
         else:
             rtypes = "MLE"
 
@@ -923,6 +950,9 @@ def main():
     parser.add_argument("--calloss_type", default="KL", type=str)
     
     parser.add_argument("--plattbin_train", default=False, action="store_true")
+    parser.add_argument("--plattbintop_train", default=False, action="store_true")
+    parser.add_argument("--platt_train", default=False, action="store_true")
+
 
     args = parser.parse_args()
 
