@@ -3,7 +3,13 @@ import os, sys
 import subprocess
 task = 'DailyDialog'
 num_updates = 5
-lambdas = np.arange(10) * 0.1 + 0.1
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--calloss_lambda", type=float, default=0.1)
+
+args = parser.parse_args()
+calloss_lambda = args.calloss_lambda
+
 learning_rate = 2e-5
 bin_size = 10
 for calloss_lambda in lambdas:
