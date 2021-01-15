@@ -413,9 +413,13 @@ def bootstrap_std(data, estimator=None, num_samples=100):
 def get_platt_scaler(model_probs, labels):
     clf = LogisticRegression(C=1e10, solver='lbfgs')
     eps = 1e-12
-    model_probs = model_probs.cpu().numpy().astype(dtype=np.float64).reshape(-1,)
+    #print(model_probs.shape, labels.shape)
+    #model_probs = model_probs.reshape(-1,)
+    
+    model_probs = model_probs.cpu().numpy().astype(dtype=np.float64)
     labels = labels.cpu().numpy().reshape(-1,)
-    model_probs = np.expand_dims(model_probs, axis=-1)
+    if len(model_probs.shape) == 1:
+        model_probs = np.expand_dims(model_probs, axis=-1)
     model_probs = np.clip(model_probs, eps, 1 - eps)
     model_probs = np.log(model_probs / (1 - model_probs))
     clf.fit(model_probs, labels)
